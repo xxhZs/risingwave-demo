@@ -12,5 +12,5 @@ select itemid from recenthistory where userid = %s limit 20;
 """
 
 GET_MOST_INTERACTED = """
-select * from user_most_interacted_item where userid=%s;
+select maxcount_item from user_most_interacted_item where userid=%s;
 """

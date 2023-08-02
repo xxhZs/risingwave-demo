@@ -35,20 +35,36 @@ class RecwaveModelService(ModelServicer):
 
 
     def GetRating(self, request, context):
-        userid, itemid, feature_iter = request.userid, request.itemid, request.feature_values
-        with self.conn.cursor() as cur:
-            cur.execute(sql.GET_MOST_INTERACTED % userid)
-            result = cur.fetchall()
-            if len(result) == 0:
-                context.set_code(grpc.StatusCode.OK)
-                return GetRatingResponse(userid=userid, itemid=itemid, rating=0)
-            userid, result_tuple = result[0], result[1]
-            window_start, count, return_userid = ast.literal_eval(result_tuple)
+        try:
+            print(f"GetRating from {request.userid}")
+            userid, itemid, feature_iter = request.userid, request.itemid, request.feature_values
+            with self.conn.cursor() as cur:
+                cur.execute(sql.GET_MOST_INTERACTED % userid)
+                result = cur.fetchall()
+                if len(result) == 0:
+                    context.set_code(grpc.StatusCode.OK)
+                    return GetRatingResponse(userid=userid, itemid=itemid, rating=0)
+                result_str = str(result[0][0])
+                start_index = result_str.rfind(',') + 1
+                end_index = result_str.rfind(')')
+                return_userid = result_str[start_index:end_index]
+            # the similarity between the most interacted item and the current one
+            items = list(self.items[itemid].values())
+            items.pop(0)
+            items_return = list(self.items[return_userid].values())
+            items_return.pop(0);
+            # print(f"result from {items}, {items_return}")
+            vec1 = np.array(items)
+            vec2 = np.array(items_return)
 
-        # the similarity between the most interacted item and the current one
-        score = 1 / (np.linalg.norm(self.items[itemid].values(), self.items[return_userid].values()) + 0.01)
-        return GetRatingResponse(userid=userid, itemid=itemid, score=score)
-
+            score = vec1.dot(vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+            # print(f"result from {score}")
+            return GetRatingResponse(userid=userid, itemid=itemid, rating=score)
+        except Exception as e:
+            print(traceback.format_exc())
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(e)
+            return RecallResponse(userid=userid, itemid=[])
 
     def Recall(self, request, context):
         userid = request.userid
@@ -69,7 +85,7 @@ class RecwaveModelService(ModelServicer):
                     context.set_code(grpc.StatusCode.OK)
                     print(f"Recall sorted keys for {userid}")
                     return RecallResponse(userid=userid,
-                        itemid=[r[0] for r in results])
+                        itemid=[str(r[0]) for r in results])
         except Exception as e:
             print(traceback.format_exc())
             context.set_code(grpc.StatusCode.INTERNAL)

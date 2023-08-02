@@ -25,10 +25,10 @@ impl Recommender for Recwave {
                                 -> Result<Response<GetRecommendationResponse>, Status> {
         let userid = request.into_inner().userid;
         println!("Recwave::get_recommendation: userid={}", userid);
-        let recalled_items = self.recall(userid.clone()).await?;
+        let recalled_items = self.recall(userid.clone()).await.unwrap();
         println!("Recwave::get_recommendation: recalled_items={:?}", recalled_items);
         let sorted_items = self.sort(userid, recalled_items, 20)
-            .await?;
+            .await.unwrap();
         println!("Recwave::get_recommendation: sorted_items={:?}", sorted_items);
         Ok(Response::new(GetRecommendationResponse {
             itemid: sorted_items,
@@ -46,12 +46,12 @@ impl Recommender for Recwave {
     async fn report_action(&self, request: Request<ReportActionRequest>)
         -> Result<Response<ReportActionResponse>, Status> {
         let message = request.into_inner();
-        self.mock_report_action(&message)
+        self.mock_report_action(&message).await
     }
 }
 
 impl Recwave{
-    fn mock_report_action(&self, message: &ReportActionRequest) -> Result<Response<ReportActionResponse>, Status> {
+    async fn mock_report_action(&self, message: &ReportActionRequest) -> Result<Response<ReportActionResponse>, Status> {
         let duration = SystemTime::now().duration_since(UNIX_EPOCH);
         // todo: format duration to SQL acceptable timestamp before SQLization
         // println!("received action from user `{}` on item `{}`", &message.userid, &message.itemid);
@@ -60,7 +60,8 @@ impl Recwave{
                 let timestamp = dur.as_micros();
                 let json = Self::create_sink_json(message, timestamp as u64);
                 println!("timestamp: {}, payload: {}", timestamp, json.clone());
-                self.kafka.send("0".to_string(), json);
+                self.kafka.send("0".to_string(), json).await;
+                // println!("2222");
                 Ok(Response::new(ReportActionResponse {
                     timestamp: timestamp as u64
                 }))
@@ -80,7 +81,7 @@ impl Recwave{
 
 
     pub(crate) fn create_sink_json(message: &ReportActionRequest, timestamp: u64) -> String {
-        format!("{{'userid': {}, 'itemid': {}, 'action': {}, 'timestamp': {}}}",
+        format!("{{\"userid\": {}, \"itemid\": {}, \"action\": {}, \"timestamp\": {}}}",
             message.userid, message.itemid, message.action, timestamp).to_string()
     }
 }

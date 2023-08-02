@@ -48,8 +48,10 @@ pub async fn main_loop() {
                     .unwrap();
                 println!("fire action success: {}", serde_json::to_string(&history).unwrap());
 
+                sleep(Duration::from_millis(200));
                 let recommendations = user.mock_get_recommendations(client_mutex.lock().await.deref_mut())
                     .await;
+                println!("userid {} , recommendations: {:?}", user.userid,recommendations);
             }
         });
         threads.push(handle);

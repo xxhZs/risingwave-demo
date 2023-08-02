@@ -12,6 +12,7 @@ impl Recwave {
         let mut model_client = ModelClient::connect("http://localhost:8080")
             .await
             .expect("Failed to connect to model server");
+        println!("Recwave::recall: userid=");
         let response = model_client.recall(request)
             .await;
         match response {
@@ -37,7 +38,7 @@ impl Recwave {
                 .expect("Failed to connect to model server");
             let response = model_client
                 .get_rating(request)
-                .await?;
+                .await.unwrap();
             let rating = response.into_inner().rating;
             ratings.push((itemid.clone(), rating));
         }

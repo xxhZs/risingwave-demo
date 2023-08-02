@@ -51,7 +51,7 @@ impl KafkaSink{
         let record = FutureRecord::to(&*output_topic)
             .payload(payload.as_bytes())
             .key(record_id.as_bytes());
-       self.client_config.send(record, Duration::from_secs(10))
+       self.client_config.send(record, Duration::from_secs(1))
            .await
            .expect("Failed to create send message request");
         println!("Sent payload {}", payload);

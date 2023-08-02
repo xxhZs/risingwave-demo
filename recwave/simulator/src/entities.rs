@@ -98,7 +98,7 @@ impl User{
         // json.insert("item", generated item)
         // json.insertion
         let selected_item = items.get(rand::thread_rng().gen_range(0, items.len() - 1)).ok_or("no item found")?;
-        let selected_action = ActionType::View;
+        let selected_action = ActionType::Click;
         let response = client.report_action(tonic::Request::new(
             ReportActionRequest {
                 userid: self.userid.clone(),
