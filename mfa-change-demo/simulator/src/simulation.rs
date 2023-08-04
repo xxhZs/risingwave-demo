@@ -1,25 +1,13 @@
 use rand;
-use std::collections::HashMap;
 use std::ops::DerefMut;
-use std::path::Path;
-use std::rc::Rc;
 use std::sync::Arc;
 use std::thread::sleep;
 use std::time::Duration;
 use rand::Rng;
-use tokio::time::Instant;
-use tokio::{
-    sync::{mpsc, oneshot},
-    task,
-};
 use futures::future::join_all;
-use tokio::runtime::{Handle, Runtime};
 use tokio::sync::{Mutex};
-use tokio::task::JoinHandle;
-use crate::entities::{User, UserContext};
 use crate::{entities};
-use crate::recommender::GetRecommendationRequest;
-use crate::recommender::recommender_client::RecommenderClient;
+use crate::server::server_client::ServerClient;
 
 fn get_delay_mills(delay_val: f64) -> u64 {
     let turbulence = rand::thread_rng().gen_range((delay_val * 0.6) as f64, (delay_val * 1.1) as f64) as f64;
@@ -29,15 +17,15 @@ fn get_delay_mills(delay_val: f64) -> u64 {
 pub async fn main_loop() {
     let users = entities::parse_user_metadata().unwrap();
 
-    let mut client = Arc::new(Mutex::new(
-        RecommenderClient::connect("https://127.0.0.1:2666")
+    let client = Arc::new(Mutex::new(
+        ServerClient::connect("https://127.0.0.1:2666")
             .await
             .expect("failed to connect to recommender server")));
     println!("Connected to server");
 
     let mut threads = vec![];
     for user in users {
-        let mut client_mutex = client.clone();
+        let client_mutex = client.clone();
         let handle = tokio::spawn(async move {
             loop {
                 sleep(Duration::from_millis(get_delay_mills(1.0 / user.activeness)));
@@ -47,34 +35,12 @@ pub async fn main_loop() {
                 println!("fire action success: {}", serde_json::to_string(&history).unwrap());
 
                 sleep(Duration::from_millis(200));
-                let count = user.mock_get_recommendations(client_mutex.lock().await.deref_mut())
+                let (count,sum) = user.mock_get_feature(client_mutex.lock().await.deref_mut())
                     .await;
-                println!("userid {} , count: {:?}", user.userid,count);
+                println!("userid {} , count: {:?} sum {:?}", user.userid,count,sum);
             }
         });
         threads.push(handle);
     }
     join_all(threads).await;
-}
-
-pub async fn main_loop_mock() {
-
-    let mut client = Arc::new(Mutex::new(
-        RecommenderClient::connect("https://127.0.0.1:2666")
-            .await
-            .expect("failed to connect to recommender server")));
-    println!("Connected to server");
-
-    let user = User{
-        userid: "user1".to_string(),
-        address_lat:1.1,
-        address_long:1.1,
-        activeness:1.1,
-        context: UserContext::default(),
-        age_approx: 1.1,
-        gender: 1.1,
-        occupation: 1.1,
-    };
-    let count = user.mock_get_recommendations(client.lock().await.deref_mut()).await;
-    println!("userid {} , count: {:?}", user.userid,count);
 }

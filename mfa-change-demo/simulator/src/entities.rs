@@ -1,15 +1,12 @@
-use rand::rngs::StdRng;
 use serde_derive::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
-use std::process::Command;
 use rand::Rng;
-use tonic::codegen::http::response;
 use tonic::transport::Channel;
-use crate::recommender::recommender_client::RecommenderClient;
-use crate::recommender::{GetRecommendationRequest, ReportActionRequest, ActionType};
+use crate::server::server_client::ServerClient;
+use crate::server::{GetFeatureRequest, ActionType, ReportActionRequest};
 
 ///    "address_lat": partial(np.random.uniform, low=-180, high=180),
 //     "address_long": partial(np.random.uniform, low=-180, high=180),
@@ -30,17 +27,6 @@ pub struct User {
     pub(crate) occupation: f64
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct Item {
-    pub(crate) itemid: String,
-    #[serde(skip)]
-    pub(crate) context: ItemContext,
-    popularity: f64,
-    brand: f64,
-    type_: f64,
-    ratings: f64,
-    freshness: f64
-}
 
 #[derive(Serialize, Deserialize)]
 pub struct ActionHistory{
@@ -69,25 +55,7 @@ pub struct UserContext {
     conversion_count: i32
 }
 
-#[derive(Default)]
-#[derive(Serialize, Deserialize)]
-pub struct ItemContext {
-    itemid: String,
 
-    view_count: i32,
-    click_count: i32,
-    purchase_count: i32,
-
-    recent_ratings: f64,
-    recent_brand: f64,
-    recent_type_: f64,
-    recent_freshness: f64,
-
-    global_ratings: f64,
-    global_brand: f64,
-    global_type_: f64,
-    global_freshness: f64,
-}
 
 pub trait UpdatableContext{
     fn update(&self, record: &ActionHistory);
@@ -95,15 +63,15 @@ pub trait UpdatableContext{
 
 
 impl User{
-    pub(crate) async fn mock_act<'a>(&'a self, client: &mut RecommenderClient<Channel>) -> Result<ActionHistory, &str> {
+    pub(crate) async fn mock_act<'a>(&'a self, client: &'a mut ServerClient<Channel>) -> Result<ActionHistory, &str> {
         // json.insert("item", generated item)
         // json.insertion
         let changenum:i64 = rand::thread_rng().gen_range(0, 90);
         let (changenum,event_type) = {
-            if changenum > 30 {
+            if changenum > 0 && changenum < 30 {
                 (changenum,ActionType::Mfachangeadd)
-            }else if changenum > 60{
-                (0 - changenum,ActionType::Mfachangereduce)
+            }else if changenum < 60{
+                (changenum - 30,ActionType::Mfachangereduce)
             }else{
                 (0,ActionType::Other)
             }
@@ -124,14 +92,15 @@ impl User{
         })
     }
 
-    pub async fn mock_get_recommendations(&self, client: &mut RecommenderClient<Channel>) -> u64 {
-        let response = client.get_recommendation(GetRecommendationRequest{
+    pub async fn mock_get_feature(&self, client: &mut ServerClient<Channel>) -> (u64,i64) {
+        let response = client.get_feature(GetFeatureRequest{
             userid: self.userid.clone()
         })
             .await
             .unwrap();
 
-        response.into_inner().count
+            let inner = response.into_inner();
+        (inner.count,inner.sum)
     }
 }
 

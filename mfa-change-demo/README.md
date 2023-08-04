@@ -1,42 +1,27 @@
 # recwave
 
-A PoC Recommender System that Utilizes RisingWave
+feature store dome
 
 ## Installation
 
-To prepare an environment for building and running Recwave, go to the root directory of Recwave and execute the following
+Run it in local.
 
-```
-docker build -t recwave-env .
-```
+1. Start kafka and risingwave. And create source and mv in risingwave. can run this script
 
-The container will include a RisingWave binary, Kafka and some other system libraries necessary for Recwave. Running this image will open a bash terminal as default entrypoint.
+./run.sh
 
-```
-docker run -it recwave-env
-```
+we can change recwave-start.sql and server/src/serving to add new demands or modift it.
 
-To build and run Recwave inside this docker environment, mount the Rust build directory and the Recwave source directory upon running the docker image.
+2. Start feature store serve demo. It can accept data writing to Kafka and provide feature query services
 
-```
-# backup the host cargo environment
-cp -r $HOME/.cargo $HOME/recwave/cargo
+cd server
+cargo run
 
-# start recwave-env with existing cargo environment
-docker run -it -v $(pwd):/opt/recwave -v $HOME/recwave/cargo:/root/.cargo recwave-env
-```
+3. Run data simulator. It can generate simulated data and simulate user queries.
 
-## What's included in the container
+cd simulator
+cargo run
 
-* Infrastructure
-    * RisingWave
-    * Kafka Cluster
 
-* Recommender Pipeline
-    * Build Dependencies: librdkafka, pkg-config , openssl
-  
-* User Simulator
 
-* Generator & Recommender Model
-    * Runtime: Python 3
-    * Requirements: numpy, psycopg, click
+

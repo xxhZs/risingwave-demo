@@ -14,21 +14,6 @@ def _chain(*funcs):
     return inner
 
 
-class ItemProperties:
-    # tags are all assumed already discretized into 0, 1, 2... labels
-    generators = {
-        "brand": partial(np.random.randint, low=0, high=30),
-        "type_": partial(np.random.randint, low=0, high=25),
-        "ratings": _chain(
-            partial(np.random.lognormal, mean=2, sigma=1),
-            partial(np.clip, a_min=0, a_max=10),
-        ),
-        "freshness": _chain(
-            partial(np.random.lognormal, mean=2, sigma=1),
-            partial(np.clip, a_min=0, a_max=10)
-        )
-    }
-
 
 class UserProperties:
     generators = {
