@@ -2,13 +2,13 @@
 
 Feature store dome.
 
-we simulate functionality of feature store demo by using a simple business scenario. We use 'simulator' to simulate a constant stream of user modifying mfa. 
+We simulate functionality of feature store demo by using a simple business scenario. We use 'simulator' to simulate a constant stream of user modifying mfa. 
 
-Then all message will be send to 'server', and write in kafka -> risingwave. Risingwave will compute the data based on pre-defined operations.(In this demo, we will calculate the 30-minute mfa change count and the sum of accumulated user changes in 30-minute).
+Then all message will be send to 'server', and write in kafka -> risingwave. Risingwave will compute the data based on pre-defined operations. (In this demo, we will calculate the 30-minute mfa change count and the sum of accumulated user changes in 30-minute).
 
-We also use 'simulator' to simulate user query our 'feature'. 'server' will accept requests -> query data -> return results.
+We also use 'simulator' to simulate user query our 'feature'. The 'server' will accept requests -> query data -> return results.
 
-If we need to modify our business logic, we only need to modify the materialized view in our risingwave (use sql statement).
+If we want to modify our business logic, we only need to modify the materialized view in our risingwave (use sql statement).
 
 ## Installation
 
